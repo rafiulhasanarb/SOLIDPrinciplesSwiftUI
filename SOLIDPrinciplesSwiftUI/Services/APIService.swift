@@ -7,7 +7,7 @@
 
 import Foundation
 
-class APIService {
+class APIService: APIServiceProtocol, APIServiceDelegate {
     //MARK: - open closed applyed
     func getCommentList(completion: @escaping (Result<[CommentModel], CustomError>) -> Void) {
         guard let url = URL(string: AppConstant.commentURL) else { return completion(.failure(.BadURL)) }
