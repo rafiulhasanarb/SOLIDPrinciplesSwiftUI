@@ -12,9 +12,9 @@ final class CommentViewModel: ObservableObject {
     @Published var commentList: [CommentModel] = []
     
     private var apiService: APIServiceDelegate
-    private var databaseHandler: APIServiceDelegate
+    private var databaseHandler: APIServiceProtocol
     
-    init(apiService: APIServiceDelegate = APIService(), databaseHandler: APIServiceDelegate = LocalDatabaseHandler()) {
+    init(apiService: APIServiceDelegate = APIService(), databaseHandler: APIServiceProtocol = LocalDatabaseHandler()) {
         self.apiService = apiService
         self.databaseHandler = databaseHandler
     }
@@ -32,13 +32,13 @@ final class CommentViewModel: ObservableObject {
                 }
             }
         } else {
-            databaseHandler.getComments { [weak self] comments in
+            databaseHandler.getCommentList { commentResult in
                 DispatchQueue.main.async {
-                    switch comments {
-                    case .success(let data):
-                        self?.commentList = data
+                    switch commentResult {
+                        case .success(let data):
+                        self.commentList = data
                     case .failure(let error):
-                        print("Error: \(error)")
+                        print("Error: \(error.localizedDescription)")
                     }
                 }
             }
@@ -59,7 +59,7 @@ final class CommentViewModel: ObservableObject {
     
     
     private func isConnectedToNetwork() -> Bool {
-        return false
+        return true
     }
 }
 

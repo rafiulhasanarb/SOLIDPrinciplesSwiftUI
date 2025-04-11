@@ -19,28 +19,35 @@ class NetworkManager {
     let apiHandler: APIHandler
     let responseHandler: ResponseHandler
     
-    init(apiHandler: APIHandler = APIHandler(), responseHandler: ResponseHandler = ResponseHandler()) {
+    // Dependency Inversion implementation
+    let apiHandlerProtocol: APIHandlerProtocol
+    let responseHandlerProtocol: ResponseHandlerProtocol
+    
+    init(apiHandler: APIHandler = APIHandler(), responseHandler: ResponseHandler = ResponseHandler(), apiHandlerProtocol: APIHandlerProtocol = APIHandler(), responseHandlerProtocol: ResponseHandlerProtocol = ResponseHandler()) {
         self.apiHandler = apiHandler
         self.responseHandler = responseHandler
+        
+        self.apiHandlerProtocol = apiHandlerProtocol
+        self.responseHandlerProtocol = responseHandlerProtocol
     }
     
     //MARK: - Open closed applyed
     func fetchReqeust<T: Codable>(url: URL, type: T.Type, completion: @escaping (Result<T, CustomError>) -> Void) {
-        apiHandler.fetchData(url: url) { dataResult in
+        apiHandlerProtocol.fetchData(url: url) { dataResult in
             switch dataResult {
             case .success(let data):
-                self.responseHandler.fetchResponseData(type: type, from: data) { result in
+                self.responseHandlerProtocol.fetchResponseData(type: type, from: data) { result in
                     switch result {
                     case .success(let responseModel):
                         completion(.success(responseModel))
                     case .failure:
-                        completion(.failure(.DecodingError))
+                        completion(.failure(.NoData))
                     }
                 }
             case .failure(_):
                 completion(.failure(.NoData))
             }
-        }
+        }        
     }
     
     // MARK: - general methods
@@ -107,7 +114,11 @@ class NetworkManager {
     
 }
 
-class APIHandler {
+protocol APIHandlerProtocol {
+    func fetchData(url: URL, completion: @escaping (Result<Data, CustomError>) -> Void)
+}
+
+class APIHandler: APIHandlerProtocol {
     //MARK: - Open closed applyed
     func fetchData(url: URL, completion: @escaping (Result<Data, CustomError>) -> Void) {
         URLSession.shared.dataTask(with: url) { (data, response, error) in
@@ -169,7 +180,11 @@ class APIHandler {
     }
 }
 
-class ResponseHandler {
+protocol ResponseHandlerProtocol {
+    func fetchResponseData<T: Codable>(type: T.Type, from data: Data, completion: @escaping (Result<T, CustomError>) -> Void)
+}
+
+class ResponseHandler: ResponseHandlerProtocol {
     //MARK: - Open closed applyed
     func fetchResponseData<T: Codable>(type: T.Type, from data: Data, completion: @escaping (Result<T, CustomError>) -> Void) {
         let decoder = JSONDecoder()
