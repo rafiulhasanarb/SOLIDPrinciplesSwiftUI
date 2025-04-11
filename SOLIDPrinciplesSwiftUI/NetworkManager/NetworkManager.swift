@@ -24,8 +24,27 @@ class NetworkManager {
         self.responseHandler = responseHandler
     }
     
+    //MARK: - Open closed applyed
+    func fetchReqeust<T: Codable>(url: URL, type: T.Type, completion: @escaping (Result<T, CustomError>) -> Void) {
+        apiHandler.fetchData(url: url) { dataResult in
+            switch dataResult {
+            case .success(let data):
+                self.responseHandler.fetchResponseData(type: type, from: data) { result in
+                    switch result {
+                    case .success(let responseModel):
+                        completion(.success(responseModel))
+                    case .failure:
+                        completion(.failure(.DecodingError))
+                    }
+                }
+            case .failure(_):
+                completion(.failure(.NoData))
+            }
+        }
+    }
+    
+    // MARK: - general methods
     func getComments(completion: @escaping (Result<[CommentModel], CustomError>) -> Void) {
-        
         guard let url = URL(string: AppConstant.commentURL) else {
             completion(.failure(.BadURL))
             return
@@ -49,7 +68,6 @@ class NetworkManager {
     }
     
     func getPosts(completion: @escaping (Result<[PostModel], CustomError>) -> Void) {
-        
         guard let url = URL(string: AppConstant.postURL) else {
             completion(.failure(.BadURL))
             return
@@ -69,7 +87,6 @@ class NetworkManager {
     }
     
     func getUsers(completion: @escaping (Result<[UserModel], CustomError>) -> Void) {
-        
         guard let url = URL(string: AppConstant.userURL) else {
             completion(.failure(.BadURL))
             return
@@ -87,10 +104,26 @@ class NetworkManager {
             }
         }.resume()
     }
+    
 }
 
 class APIHandler {
+    //MARK: - Open closed applyed
+    func fetchData(url: URL, completion: @escaping (Result<Data, CustomError>) -> Void) {
+        URLSession.shared.dataTask(with: url) { (data, response, error) in
+            if error != nil {
+                completion(.failure(.BadURL))
+                return
+            }
+            guard let data = data else {
+                completion(.failure(.NoData))
+                return
+            }
+            completion(.success(data))
+        }
+    }
     
+    // general methods
     func getCommentData(url: URL, completion: @escaping (Result<Data, CustomError>) -> Void) {
         URLSession.shared.dataTask(with: url) { (data, _, error) in
             if error != nil {
@@ -137,7 +170,19 @@ class APIHandler {
 }
 
 class ResponseHandler {
+    //MARK: - Open closed applyed
+    func fetchResponseData<T: Codable>(type: T.Type, from data: Data, completion: @escaping (Result<T, CustomError>) -> Void) {
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        do {
+            let decoderModel = try decoder.decode(T.self, from: data)
+            completion(.success(decoderModel))
+        } catch {
+            completion(.failure(.DecodingError))
+        }
+    }
     
+    // general methods
     func getCommentDecodedData(from data: Data, completion: @escaping (Result<[CommentModel], CustomError>) -> Void) {
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
